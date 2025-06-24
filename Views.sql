@@ -62,7 +62,7 @@ SELECT
     *
 FROM
     vw_mostra_instrutor_do_curso;
--- 5) Mostra os alunos de maior idade para os mais novos
+-- 5) View para mostrar os alunos de maior idade para os mais novos
 CREATE VIEW vw_mostra_alunos_por_idade AS
     SELECT 
         a.nome AS nome_do_aluno,
