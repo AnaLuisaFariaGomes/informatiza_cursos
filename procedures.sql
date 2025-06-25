@@ -50,3 +50,61 @@ DELIMITER ;
 	
 CALL sp_atualiza_dados_aluno(1004,'Ana L','2006-02-02', 'ana@gmail.com');
 SELECT * FROM aluno;
+
+
+-- Crie uma stored procedure que, passando o código de um curso, liste todas os tópicos de curso organizado por step;
+delimiter #
+create procedure sp_lista_topicos_por_curso(
+in cursoId int
+)
+BEGIN
+	select 
+        s.descricao as "Descrição da step",
+        t.nome as Topico,
+        t.conteudo as "Conteudo tópico"
+        
+    from curso c
+    join step s on s.curso_idcurso = c.idcurso
+    join step_has_topico st on st.step_idstep = s.idstep
+    join topico t on t.idtopico = st.topico_idtopico
+    where c.idcurso = cursoId
+    order by s.idstep, t.idtopico;
+END#
+delimiter ;  
+
+
+-- Crie uma stored procedure que, dado o código de um tópico, apresente a relação de alunos matriculados neste tópico;
+delimiter #
+create procedure sp_lista_alunos_por_topico(
+in p_idtopico int
+)
+BEGIN
+    select 
+        a.idaluno,
+        a.nome as Aluno,
+        a.matricula as Matricula,
+        t.nome AS Topico
+    from topico_has_aluno tha
+    join aluno a on a.idaluno = tha.aluno_idaluno
+    join topico t on t.idtopico = tha.topico_idtopico
+    where t.idtopico = p_idtopico
+    order by a.nome;
+END#
+DELIMITER ;
+
+
+-- Crie uma nova stored procedure de sua escolha. 
+delimiter #
+create procedure sp_insere_instrutor(
+in snome varchar(100),
+in scpf varchar(45)
+)
+BEGIN
+		if trim(snome) = '' then
+			select "Cadastro não realizado, o nome do instrutor não foi passado corretamente";
+        else
+			insert into instrutor (nome, cpf)
+			values (snome, scpf);
+        end if;
+END#
+DELIMITER ;
