@@ -8,9 +8,12 @@
 -- versão do PHP: 7.4.21
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-START TRANSACTION;
-SET time_zone = "+00:00";
 
+create database cursosdobaruio;
+
+use cursosdobaruio;
+
+SET time_zone = "+00:00";
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -27,7 +30,7 @@ SET time_zone = "+00:00";
 -- Estrutura da tabela `aluno`
 --
 
-CREATE TABLE `aluno` (
+CREATE TABLE cursosdobaruio.`aluno` (
   `idaluno` int(11) NOT NULL,
   `data_nascimento` date NOT NULL,
   `nome` varchar(100) NOT NULL,
@@ -538,7 +541,6 @@ ALTER TABLE `topico`
 ALTER TABLE `topico_has_aluno`
   ADD CONSTRAINT `fk_topico_has_aluno_aluno1` FOREIGN KEY (`aluno_idaluno`) REFERENCES `aluno` (`idaluno`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   ADD CONSTRAINT `fk_topico_has_aluno_topico1` FOREIGN KEY (`topico_idtopico`) REFERENCES `topico` (`idtopico`) ON DELETE NO ACTION ON UPDATE NO ACTION;
-COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
