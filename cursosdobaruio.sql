@@ -34,7 +34,8 @@ CREATE TABLE cursosdobaruio.`aluno` (
   `idaluno` int(11) NOT NULL,
   `data_nascimento` date NOT NULL,
   `nome` varchar(100) NOT NULL,
-  `matricula` int(11) NOT NULL
+  `matricula` int(11) NOT NULL,
+  `email` varchar(100)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
