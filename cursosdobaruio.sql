@@ -3,17 +3,14 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Tempo de geração: 25-Jun-2025 às 12:20
+-- Tempo de geração: 25-Jun-2025 às 13:46
 -- Versão do servidor: 10.4.20-MariaDB
 -- versão do PHP: 7.4.21
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-
-create database cursosdobaruio;
-
-use cursosdobaruio;
-
+START TRANSACTION;
 SET time_zone = "+00:00";
+
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -24,30 +21,118 @@ SET time_zone = "+00:00";
 -- Banco de dados: `cursosdobaruio`
 --
 
+DELIMITER $$
+--
+-- Procedimentos
+--
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_atualiza_dados_aluno` (IN `p_matricula` INT, IN `p_novo_nome` VARCHAR(100), IN `p_nova_data` DATE, IN `p_novo_email` VARCHAR(100))  BEGIN
+    UPDATE aluno
+    SET nome = p_novo_nome, 
+        data_nascimento = p_nova_data,
+        email = p_novo_email
+    WHERE matricula = p_matricula;
+
+    IF ROW_COUNT() = 0 THEN
+        SELECT 'Matricula não encontrada' AS mensagem;
+    ELSE
+        SELECT 'Dados atualizados com sucesso' AS mensagem;
+    END IF;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_insere_instrutor` (IN `snome` VARCHAR(100), IN `scpf` VARCHAR(45))  BEGIN
+		if trim(snome) = '' then
+			select "Cadastro não realizado, o nome do instrutor não foi passado corretamente";
+        else
+			insert into instrutor (nome, cpf)
+			values (snome, scpf);
+        end if;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_lista_alunos_por_topico` (IN `p_idtopico` INT)  BEGIN
+    select 
+        a.idaluno,
+        a.nome as Aluno,
+        a.matricula as Matricula,
+        t.nome AS Topico
+    from topico_has_aluno tha
+    join aluno a on a.idaluno = tha.aluno_idaluno
+    join topico t on t.idtopico = tha.topico_idtopico
+    where t.idtopico = p_idtopico
+    order by a.nome;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_lista_topicos_por_curso` (IN `cursoId` INT)  BEGIN
+	select 
+        s.descricao as "Descrição da step",
+        t.nome as Topico,
+        t.conteudo as "Conteudo tópico"
+        
+    from curso c
+    join step s on s.curso_idcurso = c.idcurso
+    join step_has_topico st on st.step_idstep = s.idstep
+    join topico t on t.idtopico = st.topico_idtopico
+    where c.idcurso = cursoId
+    order by s.idstep, t.idtopico;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_matricula_topicos_por_step` (IN `p_matricula` INT(11), IN `p_idstep` INT(11))  BEGIN
+    INSERT INTO topico_has_aluno (topico_idtopico, aluno_idaluno)
+    SELECT sht.topico_idtopico, a.idaluno
+    FROM aluno AS a
+    JOIN step_has_topico AS sht ON sht.step_idstep = p_idstep
+    WHERE a.matricula = p_matricula
+    AND NOT EXISTS (
+        SELECT 1
+        FROM topico_has_aluno AS tha
+        WHERE tha.topico_idtopico = sht.topico_idtopico
+        AND tha.aluno_idaluno = a.idaluno
+    );
+END$$
+
+DELIMITER ;
+
 -- --------------------------------------------------------
 
 --
 -- Estrutura da tabela `aluno`
 --
 
-CREATE TABLE cursosdobaruio.`aluno` (
+CREATE TABLE `aluno` (
   `idaluno` int(11) NOT NULL,
   `data_nascimento` date NOT NULL,
   `nome` varchar(100) NOT NULL,
   `matricula` int(11) NOT NULL,
-  `email` varchar(100)
+  `email` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
 -- Extraindo dados da tabela `aluno`
 --
 
-INSERT INTO `aluno` (`idaluno`, `data_nascimento`, `nome`, `matricula`) VALUES
-(1, '2000-01-01', 'João', 1001),
-(2, '1999-05-12', 'Maria', 1002),
-(3, '2001-03-22', 'José', 1003),
-(4, '1998-07-30', 'Ana', 1004),
-(5, '2002-11-15', 'Lucas', 1005);
+INSERT INTO `aluno` (`idaluno`, `data_nascimento`, `nome`, `matricula`, `email`) VALUES
+(1, '2000-01-01', 'João', 1001, NULL),
+(2, '1999-05-12', 'Maria', 1002, NULL),
+(3, '2001-03-22', 'José', 1003, NULL),
+(4, '1998-07-30', 'Ana', 1004, NULL),
+(5, '2002-11-15', 'Lucas', 1005, NULL);
+
+--
+-- Acionadores `aluno`
+--
+DELIMITER $$
+CREATE TRIGGER `tr_atualiza_data_modificacao` AFTER UPDATE ON `aluno` FOR EACH ROW INSERT INTO data_modificacao (data) VALUES (NOW())
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `tr_log_update_aluno` AFTER UPDATE ON `aluno` FOR EACH ROW INSERT INTO log (data_hora , tabela_afetada) VALUES (NOW() , 'aluno')
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `tr_log_update_matricula` AFTER UPDATE ON `aluno` FOR EACH ROW IF(NEW.matricula != OLD.matricula) THEN
+		INSERT INTO log (data_hora, tabela_afetada) VALUES (NOW(), 'aluno');
+	END IF
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -94,6 +179,25 @@ INSERT INTO `curso` (`idcurso`, `nome`, `semanas`) VALUES
 (4, 'Banco de Dados', '7'),
 (5, 'Machine Learning', '12');
 
+--
+-- Acionadores `curso`
+--
+DELIMITER $$
+CREATE TRIGGER `tr_log_update_curso` AFTER UPDATE ON `curso` FOR EACH ROW INSERT INTO log (data_hora , tabela_afetada) VALUES (NOW() , 'curso')
+$$
+DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura da tabela `data_modificacao`
+--
+
+CREATE TABLE `data_modificacao` (
+  `id_data` int(11) NOT NULL,
+  `data` date DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- --------------------------------------------------------
 
 --
@@ -116,6 +220,18 @@ INSERT INTO `instrutor` (`idinstrutor`, `nome`, `cpf`) VALUES
 (3, 'Bruno', '456.789.123-00'),
 (4, 'Fernanda', '789.123.456-00'),
 (5, 'Eduardo', '321.654.987-00');
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura da tabela `log`
+--
+
+CREATE TABLE `log` (
+  `idlog` int(11) NOT NULL,
+  `data_hora` datetime DEFAULT current_timestamp(),
+  `tabela_afetada` varchar(20) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
 
@@ -251,6 +367,14 @@ INSERT INTO `topico` (`idtopico`, `nome`, `conteudo`, `instrutor_idinstrutor`) V
 (3, 'HTML5', 'Tags básicas', 3),
 (4, 'SQL', 'Comandos SELECT', 4),
 (5, 'Redes Neurais', 'Introdução ao ML', 5);
+
+--
+-- Acionadores `topico`
+--
+DELIMITER $$
+CREATE TRIGGER `tr_log_update_topico` AFTER UPDATE ON `topico` FOR EACH ROW INSERT INTO log (data_hora , tabela_afetada) VALUES (NOW() , 'topico')
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -399,10 +523,22 @@ ALTER TABLE `curso`
   ADD PRIMARY KEY (`idcurso`);
 
 --
+-- Índices para tabela `data_modificacao`
+--
+ALTER TABLE `data_modificacao`
+  ADD PRIMARY KEY (`id_data`);
+
+--
 -- Índices para tabela `instrutor`
 --
 ALTER TABLE `instrutor`
   ADD PRIMARY KEY (`idinstrutor`);
+
+--
+-- Índices para tabela `log`
+--
+ALTER TABLE `log`
+  ADD PRIMARY KEY (`idlog`);
 
 --
 -- Índices para tabela `step`
@@ -469,10 +605,22 @@ ALTER TABLE `curso`
   MODIFY `idcurso` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
+-- AUTO_INCREMENT de tabela `data_modificacao`
+--
+ALTER TABLE `data_modificacao`
+  MODIFY `id_data` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT de tabela `instrutor`
 --
 ALTER TABLE `instrutor`
   MODIFY `idinstrutor` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT de tabela `log`
+--
+ALTER TABLE `log`
+  MODIFY `idlog` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de tabela `step`
@@ -542,6 +690,7 @@ ALTER TABLE `topico`
 ALTER TABLE `topico_has_aluno`
   ADD CONSTRAINT `fk_topico_has_aluno_aluno1` FOREIGN KEY (`aluno_idaluno`) REFERENCES `aluno` (`idaluno`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   ADD CONSTRAINT `fk_topico_has_aluno_topico1` FOREIGN KEY (`topico_idtopico`) REFERENCES `topico` (`idtopico`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
