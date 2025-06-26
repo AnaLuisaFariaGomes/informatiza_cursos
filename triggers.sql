@@ -1,15 +1,19 @@
-/* Crie um trigger que verifique se o CPF do aluno já está cadastrado no sistema.
- Não é permitido um mesmo CPF matriculado em mais de DOIS cursos completos ao mesmo tempo. 
- Se o aluno já estiver matriculado em dois cursos completos, o sistema não deve permitir que ele se matricule
- em um novo curso até que conclua. */
   -- 1) Criação de uma Trigger que verifica alunos matriculados em cursos pelo Cpf
- /*DELIMITER //
- CREATE TRIGGER tr_verifica_cpf BEFORE INSERT ON aluno
- FOR EACH ROW 
- BEGIN
- @qtd INT;
- IF(NEW.cpf != OLD.cpf) THEN*/
-
+ DELIMITER //
+CREATE 
+	TRIGGER tr_limite_matricula
+BEFORE INSERT ON aluno_has_curso FOR EACH ROW
+BEGIN
+  SET @qtd_matriculas = (
+    SELECT COUNT(*) 
+    FROM aluno_has_curso 
+    WHERE aluno_idaluno = NEW.aluno_idaluno
+  );
+  IF (@qtd_matriculas >= 2) THEN
+    SET NEW.aluno_idaluno = NULL;
+  END IF;
+END //
+DELIMITER ;
  -- 2) Criação e teste da Trigger que atualiza a data de modificação de um Aluno
 CREATE TABLE data_modificacao (
     id_data INT PRIMARY KEY AUTO_INCREMENT,
